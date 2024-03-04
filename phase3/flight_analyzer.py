@@ -191,19 +191,4 @@ class FlightAnalyzer():
 
 
 
-        
-
-
-
-
-
-
-
-    def method5(self):
-        pass
-
-
-
-FA = FlightAnalyzer(airlines_df, airplanes_df, airports_df, routes_df)
-#FA.method3('MUC', True)
-FA.method2()
+     
