@@ -130,6 +130,8 @@ class FlightAnalyzer():
         if internal == False:
             print(all_routes)
 
+            return all_routes
+
         if internal == True:
         
             source_country = airports_df[airports_df["IATA"] == airport]["Country"].values[0]
