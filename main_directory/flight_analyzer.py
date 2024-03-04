@@ -5,7 +5,6 @@ import seaborn as sns
 from geopy.distance import geodesic
 from shapely.geometry import LineString
 
-
 # Download the data
 airlines_df = pd.read_csv("downloads/airlines.csv")
 airplanes_df = pd.read_csv("downloads/airplanes.csv")
@@ -211,19 +210,54 @@ class FlightAnalyzer():
     
 
     def method5(self, country_name, internal=False):
-        """Develop a fifth method that receives a country name as an input and an optional argument called internal with a value of False by default.
-        If internal is True, then this method should plot only the flights leaving the country with a destination in the same country.
-        Otherwise, it plots all flights. This is analogous to the third method, but for country now."""
-        # Filter the airports dataframe to get airports only in the given country
-        country_airports = self.airports_df[self.airports_df['Country'] == country_name]['IATA'].unique()
+        """Plot flight routes from a given country. If internal is True, plot only domestic flights."""
+        routes_df = self.routes_df.copy()
+        airports_df = self.airports_df.copy()
 
-        # Get all routes for the country
-        country_routes = self.routes_df[(self.routes_df['Source airport'].isin(country_airports)) | (self.routes_df['Destination airport'].isin(country_airports))]
+        # Merge routes with airport data to get coordinates for source
+        routes_df = pd.merge(routes_df, airports_df, left_on='Source airport', right_on='IATA', how='left')
+        assert 'Latitude' in routes_df.columns and 'Longitude' in routes_df.columns, "Latitude/Longitude not found after merge on Source airport"
+        routes_df = routes_df.rename(columns={'Latitude': 'source_lat', 'Longitude': 'source_lon'})
+
+        # Merge routes with airport data to get coordinates for destination
+        routes_df = pd.merge(routes_df, airports_df, left_on='Destination airport', right_on='IATA', how='left', suffixes=('', '_dest'))
+        assert 'Latitude' in routes_df.columns and 'Longitude' in routes_df.columns, "Latitude/Longitude not found after merge on Destination airport"
+        routes_df = routes_df.rename(columns={'Latitude': 'dest_lat', 'Longitude': 'dest_lon'})
+
+        # Filter routes by the specified country
+        country_airports = airports_df[airports_df['Country'] == country_name]
+        all_routes = routes_df[routes_df['Source airport'].isin(country_airports['IATA'])]
 
         if internal:
-            # Further filter for internal flights only
-            country_routes = country_routes[(country_routes['Source airport'].isin(country_airports)) & (country_routes['Destination airport'].isin(country_airports))]
+            # Filter for domestic flights
+            internal_routes = all_routes[all_routes['Country_dest'] == country_name]
+            routes_to_plot = internal_routes
+        else:
+            # Include all flights departing from the country
+            routes_to_plot = all_routes
 
-        # Return the filtered routes
-        print(country_routes)
-        return country_routes
+        # Create GeoDataFrame for plotting
+        # Convert each route to a LineString geometry
+        routes_to_plot = routes_to_plot.dropna(subset=['source_lon', 'source_lat', 'dest_lon', 'dest_lat'])
+        routes_to_plot['geometry'] = routes_to_plot.apply(
+            lambda row: LineString([(row['source_lon'], row['source_lat']), (row['dest_lon'], row['dest_lat'])]),
+            axis=1
+        )
+        geo_routes = gpd.GeoDataFrame(routes_to_plot, geometry='geometry')
+
+        # Plot using GeoPandas
+        world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+        fig, ax = plt.subplots(figsize=(15, 10))
+        world.plot(ax=ax, color='lightgrey')
+        country = world[world.name == country_name]
+    
+        # Zoom in to the country of interest
+        bounds = country.geometry.total_bounds
+        ax.set_xlim(bounds[0], bounds[2])
+        ax.set_ylim(bounds[1], bounds[3])
+    
+        country.plot(ax=ax, color='lightgray', edgecolor='black')
+        geo_routes.plot(ax=ax, color='blue', linewidth=1, markersize=2)
+
+        plt.title(f"Flights {'within ' if internal else ''}{country_name}")
+        plt.show()
