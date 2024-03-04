@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from geopy.distance import geodesic
 import seaborn as sns
 
+
 # Download the data
 airlines_df = pd.read_csv("downloads/airlines.csv")
 airplanes_df = pd.read_csv("downloads/airplanes.csv")
@@ -118,7 +119,9 @@ class FlightAnalyzer():
         else:
             print("No distances to plot.")
 
-           
+    def visualize_flights_method_3(self, dataframe):
+
+        pass   
 
     def method3(self, airport, internal=False):
         """Develop a third method that receives an airport as an input and an optional argument called internal 
@@ -126,9 +129,9 @@ class FlightAnalyzer():
         leaving this airport with a destination in the same country. Otherwise, it plots all flights."""
 
         all_routes = routes_df[routes_df['Source airport'] == airport]
+        print(all_routes)
 
         if internal == False:
-            print(all_routes)
 
             return all_routes
 
@@ -139,8 +142,6 @@ class FlightAnalyzer():
             airports_source_country = airports_df[airports_df["Country"] == source_country]["IATA"].values
 
             destination_source_country = all_routes[all_routes["Destination airport"].isin(airports_source_country)]
-
-            print(destination_source_country)
 
             return destination_source_country
 
@@ -183,9 +184,15 @@ class FlightAnalyzer():
             equipment_list += exploded_list
 
         equipment_series = pd.Series(equipment_list)
-        print(equipment_series.value_counts().head(N))
+        equipment_df = equipment_series.value_counts().head(N).reset_index()
+        equipment_df.columns = ["Equipment", "Count"]
 
-        return equipment_series
+        plt.figure(figsize=(10, 6))
+        sns.barplot(data=equipment_df, x="Count", y="Equipment")
+        plt.title(f'Top {N} airplane models by number of routes')
+        plt.xlabel('Number of routes')
+        plt.ylabel('Airplane model')
+        plt.show()
     
 
     def method5(self, country_name, internal=False):
