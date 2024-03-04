@@ -3,10 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 # Download the data
-airlines_df = pd.read_csv("C:\\Users\\gilia\\OneDrive\\Dokumente\\Studium\\M.Sc. Business Analytics\\2nd Semester\\2612 - Advanced Programming for Data Science\\Group Project\\data\\airlines.csv")
-airplanes_df = pd.read_csv("C:\\Users\\gilia\\OneDrive\\Dokumente\\Studium\\M.Sc. Business Analytics\\2nd Semester\\2612 - Advanced Programming for Data Science\\Group Project\\data\\airplanes.csv")
-airports_df = pd.read_csv("C:\\Users\\gilia\\OneDrive\\Dokumente\\Studium\\M.Sc. Business Analytics\\2nd Semester\\2612 - Advanced Programming for Data Science\\Group Project\\data\\airports.csv")
-routes_df = pd.read_csv("C:\\Users\\gilia\\OneDrive\\Dokumente\\Studium\\M.Sc. Business Analytics\\2nd Semester\\2612 - Advanced Programming for Data Science\\Group Project\\data\\routes.csv")
+airports_df = pd.read_csv("downloads/airports.csv")
 
 class FlightDataAnalysis:
     def __init__(self, airports_df):

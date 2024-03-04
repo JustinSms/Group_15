@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-airports_df = pd.read_csv("C:\\Users\\gilia\\OneDrive\\Dokumente\\Studium\\M.Sc. Business Analytics\\2nd Semester\\2612 - Advanced Programming for Data Science\\Group Project\\data\\airports.csv")
-routes_df = pd.read_csv("C:\\Users\\gilia\\OneDrive\\Dokumente\\Studium\\M.Sc. Business Analytics\\2nd Semester\\2612 - Advanced Programming for Data Science\\Group Project\\data\\routes.csv")
+airports_df = pd.read_csv("downloads/airports.csv")
+routes_df = pd.read_csv("downloads/routes.csv")
 
 # Define the calculate_distance function
 def calculate_distance(lat1, lon1, lat2, lon2):
