@@ -137,6 +137,7 @@ class FlightAnalyzer():
             airports_source_country = airports_df[airports_df["Country"] == source_country]["IATA"].values
 
             destination_source_country = all_routes[all_routes["Destination airport"].isin(airports_source_country)]
+
             print(destination_source_country)
 
             return destination_source_country
@@ -152,11 +153,9 @@ class FlightAnalyzer():
         string_list_filter = isinstance(country_input, list) and all(isinstance(x, str) for x in country_input)
 
         try:
-            assert string_filter == True 
-            print("Tried the assert")      
+            assert string_filter == True    
         except:
             assert string_list_filter == True or country_input == None
-            print("Tried the exepct assert")
 
         routes_df["Equipment"] = routes_df["Equipment"].astype(str)
         routes_df["Equipment"] = routes_df["Equipment"].dropna()
@@ -175,7 +174,7 @@ class FlightAnalyzer():
             airports_target_country = target_country["IATA"].values
 
             routes_target_country = routes_df[routes_df["Source airport"].isin(airports_target_country)]
-            routes_target_country['Equipment'] = routes_target_country['Equipment'].str.split()
+            routes_target_country.loc[:, 'Equipment'] = routes_target_country['Equipment'].str.split()
             exploded_df = routes_target_country.explode('Equipment')
 
             exploded_list = exploded_df["Equipment"].to_list()
@@ -202,4 +201,5 @@ class FlightAnalyzer():
             country_routes = country_routes[(country_routes['Source airport'].isin(country_airports)) & (country_routes['Destination airport'].isin(country_airports))]
 
         # Return the filtered routes
+        print(country_routes)
         return country_routes
