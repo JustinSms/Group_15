@@ -203,7 +203,3 @@ class FlightAnalyzer():
 
         # Return the filtered routes
         return country_routes
-
-
-FA = FlightAnalyzer(airlines_df, airplanes_df, airports_df, routes_df)
-print(FA.method5('Germany', internal=True))
