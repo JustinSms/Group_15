@@ -1,4 +1,8 @@
 import pandas as pd
+import geopandas as gpd
+import matplotlib.pyplot as plt
+from geopy.distance import geodesic
+import seaborn as sns
 
 # Download the data
 airlines_df = pd.read_csv("downloads/airlines.csv")
@@ -13,13 +17,107 @@ class FlightAnalyzer():
         self.airplanes_df = airplanes_df
         self.airports_df = airports_df
         self.routes_df = routes_df
+        self.world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 
+    def method1(self, country_name):
+        
+        # Ensure the DataFrame has the right data types
+        self.airports_df['Latitude'] = pd.to_numeric(self.airports_df['Latitude'], errors='coerce')
+        self.airports_df['Longitude'] = pd.to_numeric(self.airports_df['Longitude'], errors='coerce')
 
-    def method1(self):
+        # Drop any rows with NaN values in Latitude or Longitude
+        self.airports_df = self.airports_df.dropna(subset=['Latitude', 'Longitude'])
+
+        # Convert the DataFrame to a GeoDataFrame
+        gdf_airports = gpd.GeoDataFrame(
+            self.airports_df,
+            geometry=gpd.points_from_xy(self.airports_df.Longitude, self.airports_df.Latitude)
+        )
+        gdf_airports.crs = {'init': 'epsg:4326'}
+
+        # Filter the world GeoDataFrame for the country of interest
+        country = self.world[self.world.name == country_name]
+
+        # If the country is not found, return
+        if country.empty:
+            print(f"No country found with the name {country_name}.")
+            return
+
+        # Create a base plot
+        fig, ax = plt.subplots(figsize=(10, 15))
+
+        # Plot the country
+        country.plot(ax=ax, color='white', edgecolor='black')
+
+        # Plot the airports on top, within the country's boundaries
+        gdf_airports_within_country = gdf_airports[gdf_airports.geometry.within(country.geometry.squeeze())]
+        gdf_airports_within_country.plot(ax=ax, color='blue', markersize=10)
+
+        # Final touches
+        plt.title(f'Airports in {country_name}')
+        ax.set_axis_off()  # Optional: Turns off the axis
+        plt.show()
         pass
 
     def method2(self):
-        pass
+        
+        routes_df_2 = self.routes_df.copy()
+        airports_df_2 = self.airports_df.copy()
+
+        # Convert Airport IDs to integers for consistency
+        airports_df_2['Airport ID'] = pd.to_numeric(airports_df_2['Airport ID'], errors='coerce')
+        routes_df_2['Source airport ID'] = pd.to_numeric(routes_df_2['Source airport ID'], errors='coerce')
+        routes_df_2['Destination airport ID'] = pd.to_numeric(routes_df_2['Destination airport ID'], errors='coerce')
+
+        # Drop NaN values that resulted from coercion errors
+        airports_df_2.dropna(subset=['Airport ID'], inplace=True)
+        routes_df_2.dropna(subset=['Source airport ID', 'Destination airport ID'], inplace=True)
+
+        # Convert IDs to integer type if they are not already
+        airports_df_2['Airport ID'] = airports_df_2['Airport ID'].astype(int)
+        routes_df_2['Source airport ID'] = routes_df_2['Source airport ID'].astype(int)
+        routes_df_2['Destination airport ID'] = routes_df_2['Destination airport ID'].astype(int)
+
+        # Define the calculate_distance function
+        def calculate_distance(lat1, lon1, lat2, lon2):
+            # Calculate the great circle distance in kilometers between two points on the Earth
+            return geodesic((lat1, lon1), (lat2, lon2)).kilometers
+        
+        distances = []
+
+        # Loop through each flight route
+        for index, route in routes_df_2.iterrows():
+            # Match the source and destination airports by ID
+            source = airports_df_2[airports_df_2['Airport ID'] == route['Source airport ID']]
+            destination = airports_df_2[airports_df_2['Airport ID'] == route['Destination airport ID']]
+            if not source.empty and not destination.empty:
+                # Print debug information
+                print(f"Calculating distance between {source.iloc[0]['Name']} and {destination.iloc[0]['Name']}")
+                source_lat = source.iloc[0]['Latitude']
+                source_lon = source.iloc[0]['Longitude']
+                dest_lat = destination.iloc[0]['Latitude']
+                dest_lon = destination.iloc[0]['Longitude']
+                print(f"Source: ({source_lat}, {source_lon}), Dest: ({dest_lat}, {dest_lon})")
+
+                # Calculate the distance and append to the list
+                distance = calculate_distance(source_lat, source_lon, dest_lat, dest_lon)
+                distances.append(distance)
+                print(f"Distance: {distance} km")  # This should not be zero or near-zero
+            
+            else:
+                print(f"Missing airport data for route: {route}")
+        
+        # Plot the distribution of flight distances
+        if distances:
+            plt.figure(figsize=(10, 6))
+            sns.histplot(distances, bins=30, kde=True)
+            plt.title('Distribution of Flight Distances')
+            plt.xlabel('Distance (km)')
+            plt.ylabel('Frequency')
+            plt.show()
+        else:
+            print("No distances to plot.")
+
            
 
     def method3(self, airport, internal=False):
@@ -93,35 +191,4 @@ class FlightAnalyzer():
 
 
 
-        
-
-
-
-
-
-
-
-    def method5(self, country_name, internal=False):
-        """Develop a fifth method that receives a country name as an input and an optional argument called internal with a value of False by default.
-        If internal is True, then this method should plot only the flights leaving the country with a destination in the same country.
-        Otherwise, it plots all flights. This is analogous to the third method, but for country now."""
-    # Filter the airports dataframe to get airports only in the given country
-        country_airports = self.airports_df[self.airports_df['Country'] == country_name]['IATA'].unique()
-
-        # Get all routes for the country
-        country_routes = self.routes_df[
-            (self.routes_df['Source airport'].isin(country_airports)) |
-            (self.routes_df['Destination airport'].isin(country_airports))
-        ]
-
-        if internal:
-            # Further filter for internal flights only
-            country_routes = country_routes[
-                (self.routes_df['Source airport'].isin(country_airports)) &
-                (self.routes_df['Destination airport'].isin(country_airports))
-            ]
-
-        # Return the filtered routes
-        return country_routes
-
-FA = FlightAnalyzer(airlines_df, airplanes_df, airports_df, routes_df)
+     
