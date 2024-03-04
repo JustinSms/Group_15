@@ -184,11 +184,26 @@ class FlightAnalyzer():
         equipment_series = pd.Series(equipment_list)
         print(equipment_series.value_counts().head(N))
 
-
         return equipment_series
+    
+
+    def method5(self, country_name, internal=False):
+        """Develop a fifth method that receives a country name as an input and an optional argument called internal with a value of False by default.
+        If internal is True, then this method should plot only the flights leaving the country with a destination in the same country.
+        Otherwise, it plots all flights. This is analogous to the third method, but for country now."""
+        # Filter the airports dataframe to get airports only in the given country
+        country_airports = self.airports_df[self.airports_df['Country'] == country_name]['IATA'].unique()
+
+        # Get all routes for the country
+        country_routes = self.routes_df[(self.routes_df['Source airport'].isin(country_airports)) | (self.routes_df['Destination airport'].isin(country_airports))]
+
+        if internal:
+            # Further filter for internal flights only
+            country_routes = country_routes[(country_routes['Source airport'].isin(country_airports)) & (country_routes['Destination airport'].isin(country_airports))]
+
+        # Return the filtered routes
+        return country_routes
 
 
-
-
-
-     
+FA = FlightAnalyzer(airlines_df, airplanes_df, airports_df, routes_df)
+print(FA.method5('Germany', internal=True))
