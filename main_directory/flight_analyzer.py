@@ -120,70 +120,92 @@ class FlightAnalyzer():
             print("No distances to plot.")           
 
     def method3(self, airport, internal=False):
-        """Develop a third method that receives an airport as an input and an optional argument called internal 
-        with a value of False by default. If internal is True, then this method should plot only the flights 
-        leaving this airport with a destination in the same country. Otherwise, it plots all flights."""
-
+        """Plot flight routes from a given airport using GeoPandas. If internal is True, plot only domestic flights."""
+        routes_df = self.routes_df.copy()
+        airports_df = self.airports_df.copy()
+ 
+        # Merge routes with airport data to get coordinates for source and destination
+        routes_df = pd.merge(routes_df, airports_df, left_on='Source airport', right_on='IATA', how='left')
+        routes_df = routes_df.rename(columns={'Latitude': 'source_lat', 'Longitude': 'source_lon'})
+        routes_df = pd.merge(routes_df, airports_df, left_on='Destination airport', right_on='IATA', how='left', suffixes=('', '_dest'))
+        routes_df = routes_df.rename(columns={'Latitude': 'dest_lat', 'Longitude': 'dest_lon'})
+ 
+        # Filter routes by the specified source airport
         all_routes = routes_df[routes_df['Source airport'] == airport]
-
-        if internal == False:
-            print(all_routes)
-
-            return all_routes
-
-        if internal == True:
-        
+ 
+        if internal:
+            # Filter for domestic flights
             source_country = airports_df[airports_df["IATA"] == airport]["Country"].values[0]
-
-            airports_source_country = airports_df[airports_df["Country"] == source_country]["IATA"].values
-
-            destination_source_country = all_routes[all_routes["Destination airport"].isin(airports_source_country)]
-
-            print(destination_source_country)
-
-            return destination_source_country
-
+            internal_routes = all_routes[all_routes['Country_dest'] == source_country]
+            routes_to_plot = internal_routes
+        else:
+            routes_to_plot = all_routes
+ 
+        # Create GeoDataFrame for plotting
+        # Convert each route to a LineString geometry
+        routes_to_plot['geometry'] = routes_to_plot.apply(
+            lambda row: LineString([(row['source_lon'], row['source_lat']), (row['dest_lon'], row['dest_lat'])]),
+            axis=1
+        )
+        geo_routes = gpd.GeoDataFrame(routes_to_plot, geometry='geometry')
+ 
+        # Plot using GeoPandas
+        world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+        fig, ax = plt.subplots(figsize=(15, 10))
+        world.plot(ax=ax, color='lightgrey')
+        geo_routes.plot(ax=ax, color='blue', linewidth=1, markersize=2)
+ 
+        plt.title(f"Flights from {airport} ({'Domestic' if internal else 'International'})")
+        plt.show()
+ 
+ 
     def method4(self, N: int, country_input = None):
-        """Develop a fourth method that may receive a string with a country or a list of country strings 
-        but has None by default. This method should plot the N most used airplane models by number of routes. 
-        If the input argument is None it should plot for all dataset. If it receives only a country or list of 
+        """Develop a fourth method that may receive a string with a country or a list of country strings
+        but has None by default. This method should plot the N most used airplane models by number of routes.
+        If the input argument is None it should plot for all dataset. If it receives only a country or list of
         countries, it should plot just for that subset."""  
-
+ 
         string_filter = isinstance(country_input, str)
         string_list_filter = isinstance(country_input, list) and all(isinstance(x, str) for x in country_input)
-
+ 
         try:
             assert string_filter == True    
         except:
             assert string_list_filter == True or country_input == None
-
+ 
         routes_df["Equipment"] = routes_df["Equipment"].astype(str)
         routes_df["Equipment"] = routes_df["Equipment"].dropna()
-
+ 
         if string_filter == True:
             country_input = [country_input]
-
+ 
         if country_input == None:
             country_input = airports_df["Country"].unique()
-
+ 
         equipment_list = []
-
+ 
         for country in country_input:
-
+ 
             target_country = airports_df[airports_df["Country"] == country]
             airports_target_country = target_country["IATA"].values
-
+ 
             routes_target_country = routes_df[routes_df["Source airport"].isin(airports_target_country)]
             routes_target_country.loc[:, 'Equipment'] = routes_target_country['Equipment'].str.split()
             exploded_df = routes_target_country.explode('Equipment')
-
+ 
             exploded_list = exploded_df["Equipment"].to_list()
             equipment_list += exploded_list
-
+ 
         equipment_series = pd.Series(equipment_list)
-        print(equipment_series.value_counts().head(N))
-
-        return equipment_series
+        equipment_df = equipment_series.value_counts().head(N).reset_index()
+        equipment_df.columns = ["Equipment", "Count"]
+ 
+        plt.figure(figsize=(10, 6))
+        sns.barplot(data=equipment_df, x="Count", y="Equipment")
+        plt.title(f'Top {N} airplane models by number of routes')
+        plt.xlabel('Number of routes')
+        plt.ylabel('Airplane model')
+        plt.show()
 
     def method5(self, country_name, internal=False):
         """
