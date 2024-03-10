@@ -21,7 +21,9 @@ class FlightAnalyzer():
         self.world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 
     def method1(self, country_name):
-        
+        """
+        Plot airports within a specified country on a map, focusing on the country.
+        """
         # Ensure the DataFrame has the right data types
         self.airports_df['Latitude'] = pd.to_numeric(self.airports_df['Latitude'], errors='coerce')
         self.airports_df['Longitude'] = pd.to_numeric(self.airports_df['Longitude'], errors='coerce')
@@ -34,7 +36,7 @@ class FlightAnalyzer():
             self.airports_df,
             geometry=gpd.points_from_xy(self.airports_df.Longitude, self.airports_df.Latitude)
         )
-        gdf_airports.crs = {'init': 'epsg:4326'}
+        gdf_airports.crs = 'epsg:4326'
 
         # Filter the world GeoDataFrame for the country of interest
         country = self.world[self.world.name == country_name]
@@ -45,20 +47,25 @@ class FlightAnalyzer():
             return
 
         # Create a base plot
-        fig, ax = plt.subplots(figsize=(10, 15))
+        fig, ax = plt.subplots(figsize=(12, 10))
 
-        # Plot the country
-        country.plot(ax=ax, color='white', edgecolor='black')
+        # Plot the country of interest with light green color and zoom in
+        country.plot(ax=ax, color='whitesmoke', edgecolor='black')
 
-        # Plot the airports on top, within the country's boundaries
-        gdf_airports_within_country = gdf_airports[gdf_airports.geometry.within(country.geometry.squeeze())]
-        gdf_airports_within_country.plot(ax=ax, color='blue', markersize=10)
+        # Plot the airports on top, within the country's boundaries, with blue color and smaller markers
+        gdf_airports_within_country = gdf_airports[gdf_airports.geometry.within(country.geometry.unary_union)]
+        gdf_airports_within_country.plot(ax=ax, marker='o', color='blue', markersize=5, alpha=0.6)
+
+        # Zoom into the country by adjusting the plot limits to the country's bounds
+        minx, miny, maxx, maxy = country.total_bounds
+        ax.set_xlim(minx, maxx)
+        ax.set_ylim(miny, maxy)
 
         # Final touches
         plt.title(f'Airports in {country_name}')
-        ax.set_axis_off()  # Optional: Turns off the axis
+        ax.set_axis_off()  # Turns off the axis for clarity
         plt.show()
-        pass
+
 
     def method2(self):
         
@@ -120,44 +127,46 @@ class FlightAnalyzer():
             print("No distances to plot.")           
 
     def method3(self, airport, internal=False):
-        """Plot flight routes from a given airport using GeoPandas. If internal is True, plot only domestic flights."""
-        routes_df = self.routes_df.copy()
-        airports_df = self.airports_df.copy()
- 
-        # Merge routes with airport data to get coordinates for source and destination
-        routes_df = pd.merge(routes_df, airports_df, left_on='Source airport', right_on='IATA', how='left')
-        routes_df = routes_df.rename(columns={'Latitude': 'source_lat', 'Longitude': 'source_lon'})
-        routes_df = pd.merge(routes_df, airports_df, left_on='Destination airport', right_on='IATA', how='left', suffixes=('', '_dest'))
-        routes_df = routes_df.rename(columns={'Latitude': 'dest_lat', 'Longitude': 'dest_lon'})
- 
+        """
+        Plot flight routes from a given airport using GeoPandas. If internal is True, plot only domestic flights.
+        """    
         # Filter routes by the specified source airport
-        all_routes = routes_df[routes_df['Source airport'] == airport]
- 
+        all_routes = self.routes_df[self.routes_df['Source airport'] == airport]
+
+        # If internal is True, further filter for routes where both source and destination airports are in the same country
         if internal:
-            # Filter for domestic flights
-            source_country = airports_df[airports_df["IATA"] == airport]["Country"].values[0]
-            internal_routes = all_routes[all_routes['Country_dest'] == source_country]
-            routes_to_plot = internal_routes
-        else:
-            routes_to_plot = all_routes
- 
-        # Create GeoDataFrame for plotting
-        # Convert each route to a LineString geometry
-        routes_to_plot['geometry'] = routes_to_plot.apply(
-            lambda row: LineString([(row['source_lon'], row['source_lat']), (row['dest_lon'], row['dest_lat'])]),
-            axis=1
-        )
-        geo_routes = gpd.GeoDataFrame(routes_to_plot, geometry='geometry')
- 
-        # Plot using GeoPandas
-        world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+            source_country = self.airports_df[self.airports_df["IATA"] == airport]["Country"].iloc[0]
+            all_routes = all_routes[all_routes['Destination airport'].isin(self.airports_df[self.airports_df['Country'] == source_country]['IATA'])]
+    
+        # Merge the filtered routes with airport coordinates for plotting
+        all_routes = all_routes.merge(self.airports_df[['IATA', 'Latitude', 'Longitude']], left_on='Source airport', right_on='IATA')
+        all_routes = all_routes.merge(self.airports_df[['IATA', 'Latitude', 'Longitude']], left_on='Destination airport', right_on='IATA', suffixes=('_source', '_dest'))
+    
+        # Create GeoDataFrame for plotting routes
+        all_routes['geometry'] = all_routes.apply(lambda x: LineString([(x['Longitude_source'], x['Latitude_source']), (x['Longitude_dest'], x['Latitude_dest'])]), axis=1)
+        geo_routes = gpd.GeoDataFrame(all_routes, geometry='geometry')
+    
+        # Plotting setup
         fig, ax = plt.subplots(figsize=(15, 10))
-        world.plot(ax=ax, color='lightgrey')
-        geo_routes.plot(ax=ax, color='blue', linewidth=1, markersize=2)
- 
+        world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+    
+        # Zoom in if internal is True
+        if internal:
+            # Identify the country's geometry in the world GeoDataFrame
+            country_geom = world[world.name == source_country].geometry.unary_union
+            minx, miny, maxx, maxy = country_geom.bounds
+            ax.set_xlim(minx, maxx)
+            ax.set_ylim(miny, maxy)
+            world[world.name == source_country].plot(ax=ax, color='whitesmoke', edgecolor='black')
+        else:
+            world.plot(ax=ax, color='lightgrey')
+    
+        # Plot the routes
+        geo_routes.plot(ax=ax, color='blue', linewidth=0.5, alpha=0.5)
+
         plt.title(f"Flights from {airport} ({'Domestic' if internal else 'International'})")
+        ax.set_axis_off()
         plt.show()
- 
  
     def method4(self, N: int, country_input = None):
         """Develop a fourth method that may receive a string with a country or a list of country strings
@@ -249,7 +258,7 @@ class FlightAnalyzer():
         world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
         country = world[world.name == country_name]
     
-        fig, ax = plt.subplots(figsize=(12, 8))
+        fig, ax = plt.subplots(figsize=(15, 10))
         world.plot(ax=ax, color='lightgrey')
     
         # Focus on the country of interest by setting plot limits
