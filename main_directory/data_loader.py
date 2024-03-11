@@ -1,10 +1,12 @@
+"""Load airline data from a ZIP file and calculate the distance between two airports."""
 import os
 import requests
 import zipfile
 import pandas as pd
 from distance_calculator import haversine_distance
 
-class AirlineDataAnalyzer:
+class AirlineDataAnalyzer():
+    """ Load data into dowloads folder"""
     def __init__(self):
         print("Initializing AirlineDataAnalyzer...")
         self.downloads_dir = './downloads'
@@ -46,33 +48,34 @@ class AirlineDataAnalyzer:
             self.airports_df = pd.read_csv(os.path.join(self.downloads_dir, 'airports.csv')).drop(columns=['Type', 'Source'], errors='ignore')
             self.routes_df = pd.read_csv(os.path.join(self.downloads_dir, 'routes.csv'))
             print("Data loaded successfully into DataFrames.")
-        except Exception as e:
-            print(f"Error loading data files into DataFrames: {e}")
+        except:
+            print(f"Error loading data files into DataFrames")
 
     def calculate_distance_between_airports(self, iata_code_1, iata_code_2):
+        """Calculate the distance between two airports using their IATA codes."""
         # First, check if the distance has already been calculated
         if (iata_code_1, iata_code_2) in self.airport_distances:
             return self.airport_distances[(iata_code_1, iata_code_2)]
         elif (iata_code_2, iata_code_1) in self.airport_distances:
             # Distance is the same in both directions
             return self.airport_distances[(iata_code_2, iata_code_1)]
-        
+
         # If not, calculate the distance
         airport1 = self.airports_df[self.airports_df['IATA'] == iata_code_1].iloc[0]
         airport2 = self.airports_df[self.airports_df['IATA'] == iata_code_2].iloc[0]
-        
+
         distance = haversine_distance(
             airport1['Latitude'], airport1['Longitude'],
             airport2['Latitude'], airport2['Longitude'])
-        
+
         # Store the calculated distance for future reference
         self.airport_distances[(iata_code_1, iata_code_2)] = distance
-        
+
         return distance
 
 if __name__ == '__main__':
     analyzer = AirlineDataAnalyzer()
-    
+
     # Calculate and print the distance between two specific airports on demand
-    distance = analyzer.calculate_distance_between_airports('LAX', 'JFK')
-    print(f"Distance between LAX and JFK: {distance} km")
+    distance_airports = analyzer.calculate_distance_between_airports('LAX', 'JFK')
+    print(f"Distance between LAX and JFK: {distance_airports} km")
