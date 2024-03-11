@@ -20,7 +20,7 @@ class FlightAnalyzer:
         self.routes_df = routes_df
         self.world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 
-    def method1(self, country_name):
+    def method1(self, country_name: str):
         """
         Plot airports within a specified country on a map, focusing on the country.
         """
@@ -37,7 +37,7 @@ class FlightAnalyzer:
         country = self.world[self.world.name == country_name]
         if country.empty:
             print(f"No country found with the name {country_name}.")
-            return
+
         fig, ax = plt.subplots(figsize=(12, 10))
         country.plot(ax=ax, color='whitesmoke', edgecolor='black')
         gdf_airports_within_country = gdf_airports[
@@ -67,7 +67,7 @@ class FlightAnalyzer:
         routes_df_2['Source airport ID'] = routes_df_2['Source airport ID'].astype(int)
         routes_df_2['Destination airport ID'] = routes_df_2['Destination airport ID'].astype(int)
 
-        def calculate_distance(lat1, lon1, lat2, lon2):
+        def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
             return geodesic((lat1, lon1), (lat2, lon2)).kilometers
 
         distances = []
@@ -94,7 +94,7 @@ class FlightAnalyzer:
             print("No distances to plot.")
 
 
-    def method3(self, airport, internal=False):
+    def method3(self, airport: str, internal: bool = False):
         """
         Plot flight routes from a given airport using GeoPandas.
         If internal is True, plot only domestic flights.
@@ -154,7 +154,7 @@ class FlightAnalyzer:
         plt.show()
 
 
-    def method4(self, N, country_input=None):
+    def method4(self, N:int, country_input=None):
         """
         Develop a fourth method that may receive a string with a country or a list
         of country strings but has None by default. This method should plot the N
@@ -205,7 +205,7 @@ class FlightAnalyzer:
         plt.show()
 
 
-    def method5(self, country_name, internal=False):
+    def method5(self, country_name: str, internal: bool=False):
         """
         Plot flight routes for a specified country. Optionally, filter for internal flights only.
 

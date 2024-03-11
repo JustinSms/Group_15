@@ -3,7 +3,7 @@ import unittest
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
-    Calculate the great circle distance in kilometers between two points 
+    Calculate the great circle distance in kilometers between two points
     on the Earth specified by their latitude and longitude in decimal degrees.
     """
     # Convert decimal degrees to radians
