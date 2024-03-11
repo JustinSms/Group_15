@@ -72,7 +72,6 @@ class FlightAnalyzer():
 
 
     def method2(self):
-        
         routes_df_2 = self.routes_df.copy()
         airports_df_2 = self.airports_df.copy()
 
