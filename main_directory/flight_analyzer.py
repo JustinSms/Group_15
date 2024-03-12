@@ -133,12 +133,14 @@ class FlightAnalyzer():
         """
         Plot flight routes from a given airport using GeoPandas. If internal is True, plot only domestic flights.
         """    
+        # Get the source country for the given airport immediately
+        source_country = self.airports_df[self.airports_df["IATA"] == airport]["Country"].iloc[0]
+
         # Filter routes by the specified source airport
         all_routes = self.routes_df[self.routes_df['Source airport'] == airport]
 
         # If internal is True, further filter for routes where both source and destination airports are in the same country
         if internal:
-            source_country = self.airports_df[self.airports_df["IATA"] == airport]["Country"].iloc[0]
             all_routes = all_routes[all_routes['Destination airport'].isin(self.airports_df[self.airports_df['Country'] == source_country]['IATA'])]
     
         # Merge the filtered routes with airport coordinates for plotting
@@ -148,25 +150,20 @@ class FlightAnalyzer():
         # Create GeoDataFrame for plotting routes
         all_routes['geometry'] = all_routes.apply(lambda x: LineString([(x['Longitude_source'], x['Latitude_source']), (x['Longitude_dest'], x['Latitude_dest'])]), axis=1)
         geo_routes = gpd.GeoDataFrame(all_routes, geometry='geometry')
+        geo_routes.crs = "EPSG:4326"
 
-        # Plotting
-        world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
-        country = world[world.name == source_country]
-    
+        # Plotting    
         fig, ax = plt.subplots(figsize=(15, 10))
+        world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
         world.plot(ax=ax, color='lightgrey')
     
         # Focus on the country of interest by setting plot limits
+        country = world[world.name == source_country]
         if internal:
             # When plotting internal flights, zoom in to the country's extent
             minx, miny, maxx, maxy = country.geometry.total_bounds
             ax.set_xlim(minx, maxx)
             ax.set_ylim(miny, maxy)
-        else:
-            # Otherwise, show the world map for context
-            ax.set_xlim(world.total_bounds[0], world.total_bounds[2])
-            ax.set_ylim(world.total_bounds[1], world.total_bounds[3])
-    
         country.plot(ax=ax, color='whitesmoke', edgecolor='black')
 
         # Plot the routes
@@ -224,70 +221,7 @@ class FlightAnalyzer():
         plt.ylabel('Airplane model')
         plt.show()
 
-    def method5(self, country_name, internal=False):
-        """
-        Plot flight routes for a specified country. Optionally, filter for internal flights only.
-        Parameters:
-        - country_name (str): The name of the country for which to plot flight routes.
-        - internal (bool, optional): Whether to plot only internal flights. Defaults to False.
-        """
-        # Ensure airports and routes dataframes are prepared with necessary columns
-        if not set(['IATA', 'Country', 'Latitude', 'Longitude']).issubset(self.airports_df.columns):
-            raise ValueError("Airports dataframe lacks required columns.")
-        if not set(['Source airport', 'Destination airport']).issubset(self.routes_df.columns):
-            raise ValueError("Routes dataframe lacks required columns.")
-    
-        # Filter airports within the specified country
-        country_airports = self.airports_df[self.airports_df['Country'] == country_name]
-        if country_airports.empty:
-            print(f"No airports found for the country: {country_name}")
-            return
-
-        # Filter routes starting from or ending in the country's airports
-        country_routes = self.routes_df[(self.routes_df['Source airport'].isin(country_airports['IATA'])) | 
-                                        (self.routes_df['Destination airport'].isin(country_airports['IATA']))]
-    
-        # If internal is True, further filter for routes where both source and destination are within the country
-        if internal:
-            country_routes = country_routes[country_routes['Source airport'].isin(country_airports['IATA']) & 
-                                            country_routes['Destination airport'].isin(country_airports['IATA'])]
-
-        # Create LineStrings for routes
-        routes_lines = country_routes.apply(lambda row: LineString([
-            (self.airports_df.loc[self.airports_df['IATA'] == row['Source airport'], 'Longitude'].values[0], 
-             self.airports_df.loc[self.airports_df['IATA'] == row['Source airport'], 'Latitude'].values[0]),
-            (self.airports_df.loc[self.airports_df['IATA'] == row['Destination airport'], 'Longitude'].values[0], 
-             self.airports_df.loc[self.airports_df['IATA'] == row['Destination airport'], 'Latitude'].values[0])
-        ]), axis=1)
-        routes_gdf = gpd.GeoDataFrame(country_routes, geometry=routes_lines)
-        routes_gdf.crs = "EPSG:4326"
-
-        # Plotting
-        world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
-        country = world[world.name == country_name]
-    
-        fig, ax = plt.subplots(figsize=(15, 10))
-        world.plot(ax=ax, color='lightgrey')
-    
-        # Focus on the country of interest by setting plot limits
-        if internal:
-            # When plotting internal flights, zoom in to the country's extent
-            minx, miny, maxx, maxy = country.geometry.total_bounds
-            ax.set_xlim(minx, maxx)
-            ax.set_ylim(miny, maxy)
-        else:
-            # Otherwise, show the world map for context
-            ax.set_xlim(world.total_bounds[0], world.total_bounds[2])
-            ax.set_ylim(world.total_bounds[1], world.total_bounds[3])
-    
-        country.plot(ax=ax, color='whitesmoke', edgecolor='black')
-        routes_gdf.plot(ax=ax, color='blue', linewidth=0.5)
-
-        plt.title(f"{'Internal' if internal else 'All'} flights for {country_name}")
-        ax.set_axis_off()
-        plt.show()
-
-    def method5_2_Tim(self, country_name, internal=False, short_haul_cutoff=1000.0):
+    def method5_2(self, country_name, internal=False, short_haul_cutoff=1000.0):
         """
         Plot internal and external flights for a specified country, differentiating between short-haul and long-haul flights.
         Also, calculates the potential emission reduction by replacing short-haul flights with rail services.
@@ -309,26 +243,30 @@ class FlightAnalyzer():
             print(f"No airports found for the country: {country_name}")
             return
 
-        # Filter routes starting from or ending in the country's airports
-        country_routes = self.routes_df[(self.routes_df['Source airport'].isin(country_airports['IATA'])) | 
-                                        (self.routes_df['Destination airport'].isin(country_airports['IATA']))]
+        # Filter routes for the specified country
+        country_routes = self.routes_df[
+            (self.routes_df['Source airport'].isin(country_airports['IATA'])) | 
+            (self.routes_df['Destination airport'].isin(country_airports['IATA']))
+        ]
     
-        # If internal is True, further filter for routes where both source and destination are within the country
+        # Further filter for internal flights if specified
         if internal:
-            country_routes = country_routes[country_routes['Source airport'].isin(country_airports['IATA']) & 
-                                            country_routes['Destination airport'].isin(country_airports['IATA'])]
+            country_routes = country_routes[
+                country_routes['Source airport'].isin(country_airports['IATA']) & 
+                country_routes['Destination airport'].isin(country_airports['IATA'])
+            ]
 
         # Create LineStrings for routes
-        routes_lines = country_routes.apply(lambda row: LineString([
-            (self.airports_df.loc[self.airports_df['IATA'] == row['Source airport'], 'Longitude'].values[0], 
-             self.airports_df.loc[self.airports_df['IATA'] == row['Source airport'], 'Latitude'].values[0]),
-            (self.airports_df.loc[self.airports_df['IATA'] == row['Destination airport'], 'Longitude'].values[0], 
-             self.airports_df.loc[self.airports_df['IATA'] == row['Destination airport'], 'Latitude'].values[0])
-        ]), axis=1)
+        routes_lines = country_routes.apply(
+            lambda row: LineString([
+                (self.airports_df.loc[self.airports_df['IATA'] == row['Source airport'], 'Longitude'].values[0], 
+                self.airports_df.loc[self.airports_df['IATA'] == row['Source airport'], 'Latitude'].values[0]),
+                (self.airports_df.loc[self.airports_df['IATA'] == row['Destination airport'], 'Longitude'].values[0], 
+                self.airports_df.loc[self.airports_df['IATA'] == row['Destination airport'], 'Latitude'].values[0])
+            ]), axis=1)
         routes_gdf = gpd.GeoDataFrame(country_routes, geometry=routes_lines)
         routes_gdf.crs = "EPSG:4326"
 
-        # New part: Distinguish between short-haul and long-haul flights
         # Calculate distances for each route
         routes_gdf['distance'] = routes_gdf.apply(lambda row: geodesic(
             (row.geometry.coords[0][1], row.geometry.coords[0][0]),
@@ -342,26 +280,29 @@ class FlightAnalyzer():
         world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
         country = world[world.name == country_name]
 
-        # Plotting with differentiation
         fig, ax = plt.subplots(figsize=(15, 10))
-
-        # Plot the world as a background with light grey color
         world.plot(ax=ax, color='lightgrey')
 
-        # Zoom in if internal is True and plot the country of interest with a specific color
-        if internal:
-            # When plotting internal flights, zoom in to the country's extent
-            minx, miny, maxx, maxy = country[country.name == country_name].total_bounds
-            ax.set_xlim(minx, maxx)
-            ax.set_ylim(miny, maxy)
-            country[country.name == country_name].plot(ax=ax, color='whitesmoke', edgecolor='black')
+        # Ensure the country plot is correctly drawn
+        if not country.empty:
+            country_to_plot = country[country.name == country_name]
+            if not country_to_plot.empty:
+                country_to_plot.plot(ax=ax, color='whitesmoke', edgecolor='black')
+                if internal:
+                    minx, miny, maxx, maxy = country_to_plot.total_bounds
+                    ax.set_xlim(minx, maxx)
+                    ax.set_ylim(miny, maxy)
         else:
-            # If not internal, still plot the country in a different color for context but don't zoom
-            country[country.name == country_name].plot(ax=ax, color='whitesmoke', edgecolor='black')
+            print(f"Could not find the country: {country_name} for plotting.")
+            return
 
-        # Plot short-haul and long-haul flights with different colors
-        short_haul.plot(ax=ax, color='orange', linewidth=0.5, label='Short-haul flights')
-        long_haul.plot(ax=ax, color='purple', linewidth=0.5, label='Long-haul flights')
+        # Plot long-haul flights first
+        if not long_haul.empty:
+            long_haul.plot(ax=ax, color='purple', linewidth=0.5, label='Long-haul flights')
+
+        # Then plot short-haul flights
+        if not short_haul.empty:
+            short_haul.plot(ax=ax, color='orange', linewidth=0.5, label='Short-haul flights')
 
         # Annotations for number of routes and total distance of short-haul flights
         num_short_haul = len(short_haul)
@@ -371,7 +312,7 @@ class FlightAnalyzer():
 
         # Potential emission reduction calculation and annotation
         # Assume a reduction factor from flights to rail (e.g., 0.1 for 10% of the emissions)
-        reduction_factor = 0.1  # Example value; replace with your researched value
+        reduction_factor = 0.1
         reduced_emissions = total_distance_short_haul * reduction_factor
         plt.annotate(f'Potential emission reduction by replacing with rail: {reduced_emissions:.2f} km equivalent', 
                     xy=(0.05, 0.9), xycoords='axes fraction', backgroundcolor='white')
