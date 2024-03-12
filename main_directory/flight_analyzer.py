@@ -311,11 +311,21 @@ class FlightAnalyzer():
                     xy=(0.05, 0.95), xycoords='axes fraction', backgroundcolor='white')
 
         # Potential emission reduction calculation and annotation
-        # Assume a reduction factor from flights to rail (e.g., 0.1 for 10% of the emissions)
-        reduction_factor = 0.1
-        reduced_emissions = total_distance_short_haul * reduction_factor
-        plt.annotate(f'Potential emission reduction by replacing with rail: {reduced_emissions:.2f} km equivalent', 
-                    xy=(0.05, 0.9), xycoords='axes fraction', backgroundcolor='white')
+        # Average CO2 emissions per passenger per kilometer for rail travel: 0.049 kg CO2 (Source: https://www.carbonindependent.org/21.html)
+        # Average CO2 emissions per passenger per kilometer for air travel: 250 kg CO2 (Source: https://www.carbonindependent.org/22.html)
+        # Average passenger per flight: ? (Source: )
+
+        # Parameters
+        emissions_flight_per_km_per_passenger = 250
+        emissions_rail_per_km_per_passenger = 0.049
+        average_passengers_per_flight = 150
+
+        total_emissions_flight = total_distance_short_haul * emissions_flight_per_km_per_passenger * average_passengers_per_flight
+        total_emissions_rail = total_distance_short_haul * emissions_rail_per_km_per_passenger * average_passengers_per_flight
+        emission_reduction = total_emissions_flight - total_emissions_rail
+
+        plt.annotate(f'Potential CO2 emission reduction by replacing short-haul flights with rail: {emission_reduction:.2f} kg',
+             xy=(0.05, 0.9), xycoords='axes fraction', backgroundcolor='white')
 
         plt.legend()
         plt.title(f"{'Internal' if internal else 'All'} flights for {country_name} (Short-haul cutoff: {short_haul_cutoff} km)")
