@@ -149,7 +149,7 @@ class FlightAnalyzer:
         # Zoom in for internal flights
         country = world[world.name == source_country]
         if internal:
-            minx, miny, maxx, maxy = country_geom.bounds
+            minx, miny, maxx, maxy = country.geometry.total_bounds
             ax.set_xlim(minx, maxx)
             ax.set_ylim(miny, maxy)
         country.plot(ax=ax, color='whitesmoke', edgecolor='black')
@@ -231,9 +231,9 @@ class FlightAnalyzer:
         The cutoff distance (in kilometers) to define short-haul flights. Defaults to 1000.
         """
         # Ensure necessary columns are present
-        if not required_airports_cols.issubset(self.airports_df.columns):
+        if not set(['IATA', 'Country', 'Latitude', 'Longitude']).issubset(self.airports_df.columns):
             raise ValueError("Airports dataframe lacks required columns.")
-        if not required_routes_cols.issubset(self.routes_df.columns):
+        if not set(['Source airport', 'Destination airport']).issubset(self.routes_df.columns):
             raise ValueError("Routes dataframe lacks required columns.")
 
         # Filter airports within the specified country
@@ -280,8 +280,8 @@ class FlightAnalyzer:
 
         # Plotting setup
         fig, ax = plt.subplots(figsize=(15, 10))
-        country = world[world.name == country_name]
         world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+        country = world[world.name == country_name]
         world.plot(ax=ax, color='lightgrey')
 
         # Ensure the country plot is correctly drawn
@@ -312,9 +312,6 @@ class FlightAnalyzer:
                     xy=(0.05, 0.95), xycoords='axes fraction', backgroundcolor='white')
 
         # Potential emission reduction calculation and annotation
-        # Average CO2 emissions per passenger per kilometer for rail travel: 0.049 kg CO2 (Source: https://www.carbonindependent.org/21.html)
-        # Average CO2 emissions per passenger per kilometer for air travel: 250 kg CO2 (Source: https://www.carbonindependent.org/22.html)
-
         # Parameters
         emissions_flight_per_km_per_passenger = 250
         emissions_rail_per_km_per_passenger = 0.049
