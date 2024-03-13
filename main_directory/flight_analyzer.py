@@ -38,7 +38,6 @@ class FlightAnalyzer:
         country = self.world[self.world.name == country_name]
         if country.empty:
             print(f"No country found with the name {country_name}.")
-            # return (?)
 
         fig, ax = plt.subplots(figsize=(12, 10))
         world.plot(ax=ax, color='lightgrey')
@@ -109,16 +108,13 @@ class FlightAnalyzer:
         """
         source_country = self.airports_df[self.airports_df["IATA"] == airport]["Country"].iloc[0]
 
-        # Filter routes by the specified source airport
         all_routes = self.routes_df[self.routes_df['Source airport'] == airport]
 
-        # Filter for internal routes if specified
         if internal:
             all_routes = all_routes[
                 all_routes['Destination airport'].isin(
                     self.airports_df[self.airports_df['Country'] == source_country]['IATA'])]
 
-        # Merge routes with airport coordinates for plotting
         all_routes = all_routes.merge(
             self.airports_df[['IATA', 'Latitude', 'Longitude']],
             left_on='Source airport',
@@ -131,7 +127,6 @@ class FlightAnalyzer:
             suffixes=('_source', '_dest')
         )
 
-        # Create GeoDataFrame for routes
         all_routes['geometry'] = all_routes.apply(
             lambda x: LineString([
                 (x['Longitude_source'], x['Latitude_source']),
@@ -141,12 +136,11 @@ class FlightAnalyzer:
         geo_routes = gpd.GeoDataFrame(all_routes, geometry='geometry')
         geo_routes.crs = "EPSG:4326"
 
-        # Setup for plotting
+        # Plotting
         fig, ax = plt.subplots(figsize=(15, 10))
         world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
         world.plot(ax=ax, color='lightgrey')
 
-        # Zoom in for internal flights
         country = world[world.name == source_country]
         if internal:
             minx, miny, maxx, maxy = country.geometry.total_bounds
@@ -154,7 +148,6 @@ class FlightAnalyzer:
             ax.set_ylim(miny, maxy)
         country.plot(ax=ax, color='whitesmoke', edgecolor='black')
 
-        # Plot the routes
         geo_routes.plot(ax=ax, color='blue', linewidth=0.5, alpha=0.5)
 
         plt.title(f"Flights from {airport} ({'Domestic' if internal else 'International'})")
@@ -215,7 +208,7 @@ class FlightAnalyzer:
         plt.show()
 
 
-    def method5_2(self, country_name: str, internal: bool=False, short_haul_cutoff=1000.0):
+    def method5(self, country_name: str, internal: bool=False, short_haul_cutoff=1000.0):
         """
         Plot internal and external flights for a specified country, 
         differentiating between short-haul and long-haul flights.
@@ -230,32 +223,26 @@ class FlightAnalyzer:
         - short_haul_cutoff (float, optional):
         The cutoff distance (in kilometers) to define short-haul flights. Defaults to 1000.
         """
-        # Ensure necessary columns are present
         if not set(['IATA', 'Country', 'Latitude', 'Longitude']).issubset(self.airports_df.columns):
             raise ValueError("Airports dataframe lacks required columns.")
         if not set(['Source airport', 'Destination airport']).issubset(self.routes_df.columns):
             raise ValueError("Routes dataframe lacks required columns.")
 
-        # Filter airports within the specified country
         country_airports = self.airports_df[self.airports_df['Country'] == country_name]
         if country_airports.empty:
             print(f"No airports found for the country: {country_name}")
-            return
 
-        # Filter routes for the specified country
         country_routes = self.routes_df[
             (self.routes_df['Source airport'].isin(country_airports['IATA'])) |
             (self.routes_df['Destination airport'].isin(country_airports['IATA']))
         ]
 
-        # Further filter for internal flights if specified
         if internal:
             country_routes = country_routes[
                 country_routes['Source airport'].isin(country_airports['IATA']) &
                 country_routes['Destination airport'].isin(country_airports['IATA'])
             ]
 
-        # Create LineStrings for routes
         routes_lines = country_routes.apply(
             lambda row: LineString([
                 (self.airports_df.loc[self.airports_df['IATA'] == row['Source airport'],
@@ -269,22 +256,19 @@ class FlightAnalyzer:
         routes_gdf = gpd.GeoDataFrame(country_routes, geometry=routes_lines)
         routes_gdf.crs = "EPSG:4326"
 
-        # Calculate distances for each route
         routes_gdf['distance'] = routes_gdf.apply(lambda row: geodesic(
             (row.geometry.coords[0][1], row.geometry.coords[0][0]),
             (row.geometry.coords[1][1], row.geometry.coords[1][0])).kilometers, axis=1)
     
-        # Distinguish routes based on cutoff distance
         short_haul = routes_gdf[routes_gdf['distance'] <= short_haul_cutoff]
         long_haul = routes_gdf[routes_gdf['distance'] > short_haul_cutoff]
 
-        # Plotting setup
+        # Plotting
         fig, ax = plt.subplots(figsize=(15, 10))
         world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
         country = world[world.name == country_name]
         world.plot(ax=ax, color='lightgrey')
 
-        # Ensure the country plot is correctly drawn
         if not country.empty:
             country_to_plot = country[country.name == country_name]
             if not country_to_plot.empty:
@@ -295,24 +279,18 @@ class FlightAnalyzer:
                     ax.set_ylim(miny, maxy)
         else:
             print(f"Could not find the country: {country_name} for plotting.")
-            return
 
-        # Plot long-haul flights first
         if not long_haul.empty:
             long_haul.plot(ax=ax, color='purple', linewidth=0.5, label='Long-haul flights')
-
-        # Then plot short-haul flights
         if not short_haul.empty:
             short_haul.plot(ax=ax, color='orange', linewidth=0.5, label='Short-haul flights')
 
-        # Annotations for number of routes and total distance of short-haul flights
         num_short_haul = len(short_haul)
         total_distance_short_haul = short_haul['distance'].sum()
         plt.annotate(f'Short-haul routes: {num_short_haul}\nTotal distance: {total_distance_short_haul:.2f} km', 
                     xy=(0.05, 0.95), xycoords='axes fraction', backgroundcolor='white')
 
         # Potential emission reduction calculation and annotation
-        # Parameters
         emissions_flight_per_km_per_passenger = 250
         emissions_rail_per_km_per_passenger = 0.049
 
