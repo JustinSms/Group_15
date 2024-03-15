@@ -5,12 +5,16 @@ import matplotlib.pyplot as plt
 from geopy.distance import geodesic
 import seaborn as sns
 from shapely.geometry import LineString
+import os
+from langchain_openai import ChatOpenAI
+import langchain
+import requests
 
 # Download the datasets from the following links:
-airlines_df = pd.read_csv("../downloads/airlines.csv")
-airplanes_df = pd.read_csv("../downloads/airplanes.csv")
-airports_df = pd.read_csv("../downloads/airports.csv")
-routes_df = pd.read_csv("../downloads/routes.csv")
+airlines_df = pd.read_csv("downloads/airlines.csv")
+airplanes_df = pd.read_csv("downloads/airplanes.csv")
+airports_df = pd.read_csv("downloads/airports.csv")
+routes_df = pd.read_csv("downloads/routes.csv")
 
 class FlightAnalyzer:
     def __init__(self, airlines_df, airplanes_df, airports_df, routes_df):
@@ -19,6 +23,16 @@ class FlightAnalyzer:
         self.airports_df = airports_df
         self.routes_df = routes_df
         self.world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+
+        # Retrieve API key securely from environment variables
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            raise ValueError(
+                "OpenAI API key not found. Please set the OPENAI_API_KEY environment variable."
+                )
+
+        # Initialize the ChatOpenAI instance for the class
+        self.llm = ChatOpenAI(api_key=api_key, temperature=0.1)
 
     def method1(self, country_name: str):
         """
@@ -168,7 +182,7 @@ class FlightAnalyzer:
         )
 
         try:
-            assert string_filter == True    
+            assert string_filter == True
         except:
             assert string_list_filter == True or country_input == None
 
@@ -210,9 +224,9 @@ class FlightAnalyzer:
 
     def method5(self, country_name: str, internal: bool=False, short_haul_cutoff=1000.0):
         """
-        Plot internal and external flights for a specified country, 
+        Plot internal and external flights for a specified country,
         differentiating between short-haul and long-haul flights.
-        Also, calculates the potential emission reduction 
+        Also, calculates the potential emission reduction
         by replacing short-haul flights with rail services.
 
         Parameters:
@@ -259,7 +273,7 @@ class FlightAnalyzer:
         routes_gdf['distance'] = routes_gdf.apply(lambda row: geodesic(
             (row.geometry.coords[0][1], row.geometry.coords[0][0]),
             (row.geometry.coords[1][1], row.geometry.coords[1][0])).kilometers, axis=1)
-    
+
         short_haul = routes_gdf[routes_gdf['distance'] <= short_haul_cutoff]
         long_haul = routes_gdf[routes_gdf['distance'] > short_haul_cutoff]
 
@@ -287,7 +301,7 @@ class FlightAnalyzer:
 
         num_short_haul = len(short_haul)
         total_distance_short_haul = short_haul['distance'].sum()
-        plt.annotate(f'Short-haul routes: {num_short_haul}\nTotal distance: {total_distance_short_haul:.2f} km', 
+        plt.annotate(f'Short-haul routes: {num_short_haul}\nTotal distance: {total_distance_short_haul:.2f} km',
                     xy=(0.05, 0.95), xycoords='axes fraction', backgroundcolor='white')
 
         # Potential emission reduction calculation and annotation
@@ -305,3 +319,76 @@ class FlightAnalyzer:
         plt.title(f"{'Internal' if internal else 'All'} flights for {country_name} (Short-haul cutoff: {short_haul_cutoff} km)")
         ax.set_axis_off()
         plt.show()
+
+
+    ### Methods Day2Phase1
+
+    def aircrafts(self):
+        """
+        Retrieve and print a list of all unique aircraft names from the dataset.
+
+        This method does not take any arguments and does not return any value.
+        Instead, it prints a list of aircraft model names directly to the standard output.
+        """
+        # Print out the list of aircraft models
+        aircraft_models = self.airplanes_df['Name'].dropna().unique()
+        print("\n".join(aircraft_models))
+
+    def aircraft_info(self, aircraft_name):
+        """
+        Fetch and print a table of specifications for a given aircraft model using a language model.
+
+        If the given aircraft model name is not found in the dataset, an exception is raised
+        and a message is provided, guiding the user to make a valid choice.
+
+        Parameters:
+        - aircraft_name (str): The name of the aircraft model for which to retrieve and print specifications.
+    """
+        # Check if the aircraft name is in the dataframe
+        if aircraft_name not in self.airplanes_df['Name'].values:
+            valid_aircraft_names = ', '.join(self.airplanes_df['Name'].dropna().unique())
+            error_message = (
+                f"Aircraft name '{aircraft_name}' is not valid. "
+                f"Please choose from the following list:\n{valid_aircraft_names}"
+            )
+            raise ValueError(error_message)
+
+        prompt = f"Create a Markdown table with the specifications for {aircraft_name}."
+
+        # Activate the language model to describe the aircraft
+        try:
+            response = self.llm.invoke(input=prompt)
+            print(response)
+        except Exception as e:
+            print(f"Error calling LLM API: {e}")
+
+    def airport_info(self, airport_code):
+        """
+        Print an airport's description by IATA code using OpenAI's language model.
+
+        If no airport is found, prints a not found message.
+
+        Parameters:
+        - airport_code (str): Airport's IATA code.
+        """
+        # Check if the airport code is in the dataframe
+        airport_data = self.airports_df.loc[self.airports_df['IATA'] == airport_code]
+
+        if not airport_data.empty:
+            # Prepare the prompt for the LLM based on the airport data
+            airport_name = airport_data.iloc[0]['Name']
+            prompt = (
+                f"Create a Markdown table with the specifications for "
+                f"the airport with IATA code {airport_code}."
+            )
+
+            # Activate the language model to describe the airport
+            try:
+                description = self.llm.invoke(input=prompt)
+                print(description)
+            except Exception as e:
+                print(f"Error calling LLM API: {e}")
+
+        else:
+            print(f"Airport code '{airport_code}' not found.")
+
