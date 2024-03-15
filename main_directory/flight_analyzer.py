@@ -9,6 +9,8 @@ import os
 from langchain_openai import ChatOpenAI
 import langchain
 import requests
+from IPython.display import display, Markdown
+from dotenv import load_dotenv
 
 # Download the datasets from the following links:
 airlines_df = pd.read_csv("downloads/airlines.csv")
@@ -24,12 +26,16 @@ class FlightAnalyzer:
         self.routes_df = routes_df
         self.world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 
+        # Load environment variables from .env file
+        load_dotenv()
+
         # Retrieve API key securely from environment variables
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             raise ValueError(
-                "OpenAI API key not found. Please set the OPENAI_API_KEY environment variable."
-                )
+                "OpenAI API key not found. Please ensure the OPENAI_API_KEY "
+                "environment variable is set in the .env file."
+            )
 
         # Initialize the ChatOpenAI instance for the class
         self.llm = ChatOpenAI(api_key=api_key, temperature=0.1)
@@ -336,14 +342,14 @@ class FlightAnalyzer:
 
     def aircraft_info(self, aircraft_name):
         """
-        Fetch and print a table of specifications for a given aircraft model using a language model.
+        Fetch and display a table of specifications for a given aircraft model using Chat GPT.
 
         If the given aircraft model name is not found in the dataset, an exception is raised
         and a message is provided, guiding the user to make a valid choice.
 
         Parameters:
-        - aircraft_name (str): The name of the aircraft model for which to retrieve and print specifications.
-    """
+        - aircraft_name (str): The name of the aircraft model for which to display specifications.
+        """
         # Check if the aircraft name is in the dataframe
         if aircraft_name not in self.airplanes_df['Name'].values:
             valid_aircraft_names = ', '.join(self.airplanes_df['Name'].dropna().unique())
@@ -358,9 +364,15 @@ class FlightAnalyzer:
         # Activate the language model to describe the aircraft
         try:
             response = self.llm.invoke(input=prompt)
-            print(response)
+
+            markdown_content = response.content
+
+            display(Markdown(markdown_content))
+
         except Exception as e:
             print(f"Error calling LLM API: {e}")
+
+        return ""
 
     def airport_info(self, airport_code):
         """
@@ -384,11 +396,19 @@ class FlightAnalyzer:
 
             # Activate the language model to describe the airport
             try:
-                description = self.llm.invoke(input=prompt)
-                print(description)
+                response  = self.llm.invoke(input=prompt)
+
+                markdown_content = response.content
+
+                display(Markdown(markdown_content))
+
             except Exception as e:
                 print(f"Error calling LLM API: {e}")
 
         else:
             print(f"Airport code '{airport_code}' not found.")
+
+
+
+
 
