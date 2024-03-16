@@ -7,8 +7,8 @@ import seaborn as sns
 from shapely.geometry import LineString
 import os
 from langchain_openai import ChatOpenAI
-import langchain
-import requests
+import langchain    # Warum haben wir dieses Modul hier?
+import requests     # Warum haben wir dieses Modul hier?
 from IPython.display import display, Markdown
 from dotenv import load_dotenv
 
@@ -74,6 +74,7 @@ class FlightAnalyzer:
         plt.show()
 
     def method2(self):
+        """Visualize the distribution of flight distances using a histogram"""
         routes_df_2 = self.routes_df.copy()
         airports_df_2 = self.airports_df.copy()
         airports_df_2['Airport ID'] = pd.to_numeric(
