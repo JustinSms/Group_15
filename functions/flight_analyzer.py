@@ -200,7 +200,7 @@ class FlightAnalyzer:
         try:
             assert string_filter == True
         except:
-            assert string_list_filter == True or country_input == None
+            assert string_list_filter == True or country_input is None
 
         self.routes_df['Equipment'] = self.routes_df['Equipment'].astype(str)
         self.routes_df['Equipment'] = self.routes_df['Equipment'].dropna()
@@ -370,7 +370,8 @@ class FlightAnalyzer:
             markdown_content = response.content
 
             display(Markdown(markdown_content))
-
+        except TimeoutError:
+            print("The request timed out. Please try again later.")
         except Exception as e:
             print(f"Error calling LLM API: {e}")
 

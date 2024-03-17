@@ -29,7 +29,7 @@ class AirlineDataAnalyzer():
         zip_path = os.path.join(self.downloads_dir, 'flight_data.zip')
         if not os.path.exists(zip_path):
             print("Downloading ZIP file...")
-            response = requests.get(self.zip_url)
+            response = requests.get(self.zip_url, timeout=5)
             with open(zip_path, 'wb') as zip_file:
                 zip_file.write(response.content)
             print("Downloaded ZIP file.")
@@ -51,8 +51,15 @@ class AirlineDataAnalyzer():
                                                )
             self.routes_df = pd.read_csv(os.path.join(self.downloads_dir, 'routes.csv'))
             print("Data loaded successfully into DataFrames.")
-        except:
-            print("Error loading data files into DataFrames")
+
+        except FileNotFoundError as e:
+            print(f"File not found: {e}")
+        except pd.errors.EmptyDataError:
+            print("One of the files is empty.")
+        except pd.errors.ParserError:
+            print("Error parsing one of the files.")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
 
     def calculate_distance_between_airports(self, iata_code_1, iata_code_2):
         """Calculate the distance between two airports using their IATA codes."""
