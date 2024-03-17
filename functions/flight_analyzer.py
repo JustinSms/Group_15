@@ -42,7 +42,10 @@ class FlightAnalyzer:
 
     def method1(self, country_name: str):
         """
-        Plot airports within a specified country on a map, focusing on the country.
+        This method takes the name of a country as input and displays a map highlighting the geographical locations
+        of all the airports in that country. Airports are represented as blue points on the map.
+        The map is focused on the geographical boundaries of the given country, enhancing the visual representation
+        of the airports' distribution within it.
         """
         self.airports_df['Latitude'] = pd.to_numeric(
             self.airports_df['Latitude'], errors='coerce')
@@ -74,7 +77,10 @@ class FlightAnalyzer:
         plt.show()
 
     def method2(self):
-        """Visualize the distribution of flight distances using a histogram"""
+        """This method goes through the dataset of routes and calculates the great circle distance between each pair
+        of source and destination airports. It then plots a histogram to show the frequency distribution of these
+        flight distances. The histogram helps to visualize the commonality of different flight lengths,
+        from short hops to long hauls, providing insights into the dataset's flight distance characteristics."""
         routes_df_2 = self.routes_df.copy()
         airports_df_2 = self.airports_df.copy()
         airports_df_2['Airport ID'] = pd.to_numeric(
