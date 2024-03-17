@@ -14,7 +14,7 @@ class AirlineDataAnalyzer():
         self.ensure_downloads_dir_exists()
         self.download_and_extract_zip()
         self.load_data_files()
-        self.airport_distances = {}  # Dictionary to store airport distances
+        self.airport_distances = {}
 
     def ensure_downloads_dir_exists(self):
         """Ensure the downloads directory exists within the project."""
@@ -45,10 +45,13 @@ class AirlineDataAnalyzer():
         try:
             self.airlines_df = pd.read_csv(os.path.join(self.downloads_dir, 'airlines.csv'))
             self.airplanes_df = pd.read_csv(os.path.join(self.downloads_dir, 'airplanes.csv'))
-            self.airports_df = pd.read_csv(os.path.join(self.downloads_dir, 'airports.csv')).drop(columns=['Type', 'Source'], errors='ignore')
+            self.airports_df = pd.read_csv(os.path.join
+                                           (self.downloads_dir, 'airports.csv')).drop(
+                                               columns=['Type', 'Source'], errors='ignore'
+                                               )
             self.routes_df = pd.read_csv(os.path.join(self.downloads_dir, 'routes.csv'))
             print("Data loaded successfully into DataFrames.")
-        except:                                                     # except zu allgemein, nicht PEP8 konform
+        except:
             print("Error loading data files into DataFrames")
 
     def calculate_distance_between_airports(self, iata_code_1, iata_code_2):
@@ -56,9 +59,6 @@ class AirlineDataAnalyzer():
         # First, check if the distance has already been calculated
         if (iata_code_1, iata_code_2) in self.airport_distances:
             return self.airport_distances[(iata_code_1, iata_code_2)]
-        elif (iata_code_2, iata_code_1) in self.airport_distances:   # unnötiges elif, bitte entfernen nicht PEP8 konform
-            # Distance is the same in both directions
-            return self.airport_distances[(iata_code_2, iata_code_1)]
 
         # If not, calculate the distance
         airport1 = self.airports_df[self.airports_df['IATA'] == iata_code_1].iloc[0]

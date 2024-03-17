@@ -7,16 +7,9 @@ import seaborn as sns
 from shapely.geometry import LineString
 import os
 from langchain_openai import ChatOpenAI
-import langchain    # Warum haben wir dieses Modul hier?
-import requests     # Warum haben wir dieses Modul hier?
 from IPython.display import display, Markdown
 from dotenv import load_dotenv
 
-# Download the datasets from the following links:
-airlines_df = pd.read_csv("../downloads/airlines.csv")
-airplanes_df = pd.read_csv("../downloads/airplanes.csv")
-airports_df = pd.read_csv("../downloads/airports.csv")
-routes_df = pd.read_csv("../downloads/routes.csv")
 
 class FlightAnalyzer:
     def __init__(self, airlines_df, airplanes_df, airports_df, routes_df):
@@ -42,10 +35,10 @@ class FlightAnalyzer:
 
     def method1(self, country_name: str):
         """
-        This method takes the name of a country as input and displays a map highlighting the geographical locations
-        of all the airports in that country. Airports are represented as blue points on the map.
-        The map is focused on the geographical boundaries of the given country, enhancing the visual representation
-        of the airports' distribution within it.
+        This method takes the name of a country as input and displays a map highlighting the
+        geographical locations of all the airports in that country. Airports are represented
+        as blue points on the map. The map is focused on the geographical boundaries of the
+        given country, enhancing the visual representation of the airports' distribution.
         """
         self.airports_df['Latitude'] = pd.to_numeric(
             self.airports_df['Latitude'], errors='coerce')
@@ -77,10 +70,13 @@ class FlightAnalyzer:
         plt.show()
 
     def method2(self):
-        """This method goes through the dataset of routes and calculates the great circle distance between each pair
-        of source and destination airports. It then plots a histogram to show the frequency distribution of these
-        flight distances. The histogram helps to visualize the commonality of different flight lengths,
-        from short hops to long hauls, providing insights into the dataset's flight distance characteristics."""
+        """This method goes through the dataset of routes and calculates the great
+        circle distance between each pair of source and destination airports. It
+        then plots a histogram to show the frequency distribution of these flight
+        distances. The histogram helps to visualize the commonality of different
+        flight lengths, from short hops to long hauls, providing insights into the
+        dataset's flight distance characteristics."""
+
         routes_df_2 = self.routes_df.copy()
         airports_df_2 = self.airports_df.copy()
         airports_df_2['Airport ID'] = pd.to_numeric(
@@ -241,14 +237,6 @@ class FlightAnalyzer:
         differentiating between short-haul and long-haul flights.
         Also, calculates the potential emission reduction
         by replacing short-haul flights with rail services.
-
-        Parameters:
-        - country_name (str):
-        The name of the country for which to plot flight routes.
-        - internal (bool, optional):
-        Whether to plot only internal flights. Defaults to False.
-        - short_haul_cutoff (float, optional):
-        The cutoff distance (in kilometers) to define short-haul flights. Defaults to 1000.
         """
         if not set(['IATA', 'Country', 'Latitude', 'Longitude']).issubset(self.airports_df.columns):
             raise ValueError("Airports dataframe lacks required columns.")
@@ -414,8 +402,3 @@ class FlightAnalyzer:
 
         else:
             print(f"Airport code '{airport_code}' not found.")
-
-
-
-
-
