@@ -9,6 +9,13 @@ import os
 from langchain_openai import ChatOpenAI
 from IPython.display import display, Markdown
 from dotenv import load_dotenv
+from data_loader import AirlineDataAnalyzer
+
+# Load the datasets
+data_loader = AirlineDataAnalyzer()
+data_loader.ensure_downloads_dir_exists()
+data_loader.download_and_extract_zip()
+data_loader.load_data_files()
 
 
 class FlightAnalyzer:
