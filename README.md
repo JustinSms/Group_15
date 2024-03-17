@@ -9,7 +9,7 @@ Emails:
 
 
 # Project Title
-Brief description of what your project does and its purpose.
+The goal of the project was to gain deep insight into commercial airflight data provided by IATA. 
 
 ## Getting Started
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
