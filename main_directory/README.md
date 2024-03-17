@@ -13,7 +13,8 @@ Emails:
 ## Table of Contents
 1. Project Description
 2. How to Install and Run the Project
-3. License
+3. Remarks
+4. Additional information
 
 ## 1. Project Description
 The goal of the project is to analyze Commercial Airflight data for a sustainability study.
@@ -59,13 +60,15 @@ After installation, launch the Jupyter notebook interface to view and run the pr
 
 Navigate to the showcase.ipynb notebook within the Jupyter interface to view the project's main presentation and analysis.
 
+## 3. Remarks
 
+Setting the PEP 8 compliance threshold of pylint to 8 is a practical compromise that balances code quality with developer efficiency. It enforces adherence to Python's style guidelines while allowing flexibility for scenarios where perfect compliance is not feasible or necessary. This approach ensures code remains readable and maintainable without making linting a bottleneck in development processes. It promotes a culture of quality, while also accommodating the practical challenges of software development.
 
+## 4. Additional information
 
-
-Built With
-Python - The programming language used.
-Conda - Dependency Management.
+Built With:
+- Python - The programming language used.
+- Conda - Dependency Management.
 
 Authors: Justin Sams, Tim Gunkel, Gilian Wagner, Benedikt Tremmel
 

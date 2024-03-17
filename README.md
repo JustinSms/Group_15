@@ -62,7 +62,7 @@ Navigate to the showcase.ipynb notebook within the Jupyter interface to view the
 
 ## 3. Remarks
 
-If the showcase notebook fails to read the csv files, remove "../" in the beginning of the "pd.read_csv" command. This is because the data_loader file loads the csv files into different folders depending on the OS.
+Setting the PEP 8 compliance threshold of pylint to 8 is a practical compromise that balances code quality with developer efficiency. It enforces adherence to Python's style guidelines while allowing flexibility for scenarios where perfect compliance is not feasible or necessary. This approach ensures code remains readable and maintainable without making linting a bottleneck in development processes. It promotes a culture of quality, while also accommodating the practical challenges of software development.
 
 ## 4. Additional information
 
